@@ -48,7 +48,7 @@
     .panel h2 { font-size: 1.06rem; margin: 0 0 8px; color: var(--accent); }
 
     textarea {
-      width: 100%; min-height: 140px; resize: vertical;
+      width: 100%; min-height: 160px; resize: vertical;
       color: var(--text); background: var(--ink);
       border: 1px solid var(--border); border-radius: 10px; padding: 10px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -158,7 +158,7 @@
         <div>Status: <span id="status">Idle</span></div>
         <div>Last updated: <span id="updatedAt">—</span></div>
         <div>Items in scope: <span id="countInScope">0</span></div>
-        <div>Auto‑refresh: <span id="refreshInfo">Every 12 min</span></div>
+        <div>Auto‑refresh: <span id="refreshInfo">Every 10 min</span></div>
       </div>
     </section>
 
@@ -171,12 +171,12 @@
   </footer>
 
   <script>
-    // ========= Configuration (optimized for speed & security) =========
-    const CACHE_KEY = 'feedgator_cache_v5';
-    const MAX_ITEMS_PER_FEED = 200;
-    const AUTO_REFRESH_MINUTES = 12; // faster refresh
-    const CONCURRENCY = 8;           // parallel fetch workers
-    const REQUEST_TIMEOUT_MS = 10000;// per-feed timeout
+    // ========= Configuration (optimized for speed & coverage) =========
+    const CACHE_KEY = 'feedgator_cache_v6';
+    const MAX_ITEMS_PER_FEED = 400;     // pull more per feed
+    const AUTO_REFRESH_MINUTES = 10;    // faster refresh
+    const CONCURRENCY = 12;             // more parallel fetch workers
+    const REQUEST_TIMEOUT_MS = 12000;   // per-feed timeout
 
     // ========= DOM =========
     const dom = {
@@ -200,30 +200,26 @@
     const setStatus = (txt) => { dom.status.textContent = txt; };
 
     // ========= Tagging (broad coverage for cyber terms) =========
-    // Each tag has:
-    // - name: label on UI
-    // - weight: contributes to "cyber priority"
-    // - keys: keywords to match (lowercase substring match)
     const TAGS = [
-      { name: 'Ransomware',  weight: 7,  keys: ['ransom', 'lockbit', 'blackcat', 'alphv'] },
-      { name: 'Malware',     weight: 6,  keys: ['malware', 'trojan', 'worm', 'spyware', 'adware'] },
-      { name: 'Exploit',     weight: 6,  keys: ['exploit', 'eop', 'rce', 'lpe', 'remote code execution', 'privilege escalation'] },
-      { name: 'CVE',         weight: 6,  keys: ['cve-', 'cve '] },
-      { name: 'Zero‑Day',    weight: 6,  keys: ['zero day', '0day', 'zero‑day'] },
-      { name: 'Phishing',    weight: 5,  keys: ['phishing', 'spear', 'smishing', 'vishing', 'bec'] },
-      { name: 'Breach',      weight: 5,  keys: ['breach', 'data leak', 'leak', 'compromise'] },
-      { name: 'Patch',       weight: 4,  keys: ['patch', 'update', 'security update', 'advisory'] },
-      { name: 'DDoS',        weight: 4,  keys: ['ddos', 'denial of service'] },
-      { name: 'APT',         weight: 5,  keys: ['apt', 'nation-state', 'state-sponsored'] },
-      { name: 'Supply Chain',weight: 5,  keys: ['supply chain', 'dependency', 'typosquat'] },
-      { name: 'Backdoor',    weight: 5,  keys: ['backdoor', 'webshell'] },
-      { name: 'IoC',         weight: 4,  keys: ['ioc', 'indicator of compromise'] },
-      { name: 'Cloud',       weight: 3,  keys: ['aws', 'azure', 'gcp', 'cloud', 'kubernetes', 'container'] },
-      { name: 'Identity',    weight: 3,  keys: ['okta', 'adfs', 'kerberos', 'ntlm', 'active directory'] },
-      { name: 'Network',     weight: 3,  keys: ['cisco', 'juniper', 'fortinet', 'palo alto', 'checkpoint'] },
-      { name: 'Web Vulns',   weight: 3,  keys: ['xss', 'csrf', 'ssrf', 'sql injection', 'path traversal'] },
-      { name: 'Email Threat',weight: 3,  keys: ['spam', 'spoofing', 'dmarc', 'spf', 'dkim'] },
-      { name: 'Crypto',      weight: 2,  keys: ['crypto', 'blockchain'] }
+      { name: 'Ransomware',  weight: 8, keys: ['ransom', 'lockbit', 'blackcat', 'alphv', 'conti', 'revil'] },
+      { name: 'Malware',     weight: 6, keys: ['malware', 'trojan', 'worm', 'spyware', 'adware', 'rootkit', 'botnet'] },
+      { name: 'Exploit',     weight: 6, keys: ['exploit', 'eop', 'rce', 'lpe', 'remote code execution', 'privilege escalation'] },
+      { name: 'CVE',         weight: 6, keys: ['cve-', 'cve '] },
+      { name: 'Zero‑Day',    weight: 7, keys: ['zero day', '0day', 'zero‑day'] },
+      { name: 'Phishing',    weight: 5, keys: ['phishing', 'spear', 'smishing', 'vishing', 'bec', 'credential theft'] },
+      { name: 'Breach',      weight: 5, keys: ['breach', 'data leak', 'leak', 'compromise', 'exfiltration'] },
+      { name: 'Patch',       weight: 4, keys: ['patch', 'update', 'security update', 'advisory', 'fix'] },
+      { name: 'DDoS',        weight: 4, keys: ['ddos', 'denial of service'] },
+      { name: 'APT',         weight: 5, keys: ['apt', 'nation-state', 'state-sponsored'] },
+      { name: 'Supply Chain',weight: 5, keys: ['supply chain', 'dependency', 'typosquat', 'package'] },
+      { name: 'Backdoor',    weight: 5, keys: ['backdoor', 'webshell'] },
+      { name: 'IoC',         weight: 4, keys: ['ioc', 'indicator of compromise'] },
+      { name: 'Cloud',       weight: 3, keys: ['aws', 'azure', 'gcp', 'cloud', 'kubernetes', 'container'] },
+      { name: 'Identity',    weight: 3, keys: ['okta', 'adfs', 'kerberos', 'ntlm', 'active directory'] },
+      { name: 'Network',     weight: 3, keys: ['cisco', 'juniper', 'fortinet', 'palo alto', 'checkpoint'] },
+      { name: 'Web Vulns',   weight: 3, keys: ['xss', 'csrf', 'ssrf', 'sql injection', 'path traversal', 'deserialization'] },
+      { name: 'Email Threat',weight: 3, keys: ['spam', 'spoofing', 'dmarc', 'spf', 'dkim'] },
+      { name: 'Crypto',      weight: 2, keys: ['crypto', 'blockchain'] }
     ];
 
     function computeTagsAndPriority(text) {
@@ -323,6 +319,8 @@
       const data = await res.json();
       return data.contents;
     }
+
+    // Progressive processing: render and cache as each feed completes
     async function processFeed(feedUrl) {
       try {
         const xmlStr = await fetchFeedXML(feedUrl);
@@ -340,10 +338,7 @@
           feedTitle = ft ? (ft.textContent || '').trim() : feedUrl;
           const entries = [...doc.querySelectorAll('feed > entry')].slice(0, MAX_ITEMS_PER_FEED);
           for (const en of entries) items.push(normalizeItem(en, 'atom', feedTitle, feedUrl));
-        } else {
-          // Unknown format → skip
         }
-        // Pre-compute tags & priority
         for (const it of items) {
           const blob = (it.title + ' ' + it.description + ' ' + it.source).toLowerCase();
           const { tags, score } = computeTagsAndPriority(blob);
@@ -356,12 +351,13 @@
         return [];
       }
     }
-    async function loadFeeds(feedUrls) {
+
+    async function loadFeeds(feedUrls, onProgress) {
       setStatus('Fetching ' + feedUrls.length + ' feeds…');
       const urls = feedUrls.filter(Boolean);
-
       const out = [];
       let index = 0;
+
       async function worker() {
         while (index < urls.length) {
           const i = index++;
@@ -369,8 +365,14 @@
           setStatus(`Fetching (${i+1}/${urls.length}): ${u}`);
           const items = await processFeed(u);
           out.push(...items);
+          if (typeof onProgress === 'function') {
+            const filtered = filterItems(out, dom.scope.value, dom.keyword.value);
+            const sorted = sortItems(dedupeItems(filtered), dom.sort.value);
+            render(sorted);
+          }
         }
       }
+
       const workers = Array.from({ length: Math.min(CONCURRENCY, urls.length) }, () => worker());
       await Promise.all(workers);
 
@@ -435,7 +437,7 @@
         // Description
         const descEl = document.createElement('div');
         descEl.className = 'desc';
-        descEl.textContent = sanitize(it.description).slice(0, 400);
+        descEl.textContent = sanitize(it.description).slice(0, 450);
 
         // Tags
         const tagsEl = document.createElement('div');
@@ -444,7 +446,6 @@
         for (const t of tags) {
           const tag = document.createElement('span');
           tag.className = 'tag';
-          // Simple visual emphasis: higher score → more critical color
           if (['Ransomware', 'Exploit', 'Zero‑Day', 'CVE', 'Breach', 'Backdoor'].includes(t)) tag.classList.add('critical');
           else if (['Malware', 'APT', 'DDoS', 'Supply Chain', 'IoC'].includes(t)) tag.classList.add('high');
           tag.textContent = t;
@@ -554,11 +555,11 @@
           items = cached.items;
         } else {
           setStatus('Cache mismatch. Fetching…');
-          items = await loadFeeds(feedUrls);
+          items = await loadFeeds(feedUrls, /*onProgress*/ (partial) => {});
           saveCache(feedUrls, items);
         }
       } else {
-        items = await loadFeeds(feedUrls);
+        items = await loadFeeds(feedUrls, /*onProgress*/ (partial) => {});
         saveCache(feedUrls, items);
       }
 
@@ -602,7 +603,7 @@
     // ========= First load: defaults & timer =========
     window.addEventListener('load', () => {
       if (!dom.feedList.value.trim()) {
-        // Default + additional free cyber security RSS/Atom feeds
+        // Extended list of free cyber security RSS/Atom feeds for more articles
         dom.feedList.value = [
           'https://feeds.feedburner.com/TheHackersNews',
           'https://www.bleepingcomputer.com/feed/',
@@ -617,13 +618,20 @@
           'https://www.cyberscoop.com/feed/',
           'https://www.scmagazine.com/home/security-news/feed/',
           'https://www.infosecurity-magazine.com/rss/news/',
-          'https://www.schneier.com/feed/atom/',               // Schneier on Security (Atom)
-          'https://feeds.feedburner.com/GrahamCluley',         // Graham Cluley
-          'https://threatpost.com/feed/',                      // Threatpost
-          'https://nakedsecurity.sophos.com/feed/',            // Sophos Naked Security
-          'https://blog.talosintelligence.com/feeds/posts/default', // Cisco Talos (Atom)
-          'https://www.malwarebytes.com/blog/feed',            // Malwarebytes Labs
-          'https://www.us-cert.gov/ncas/alerts.xml'            // US-CERT Alerts (legacy path may redirect)
+          'https://www.schneier.com/feed/atom/',
+          'https://feeds.feedburner.com/GrahamCluley',
+          'https://threatpost.com/feed/',
+          'https://nakedsecurity.sophos.com/feed/',
+          'https://blog.talosintelligence.com/feeds/posts/default',
+          'https://www.malwarebytes.com/blog/feed',
+          'https://www.us-cert.gov/ncas/alerts.xml',
+          'https://www.welivesecurity.com/feed/',                 /* ESET WeLiveSecurity */
+          'https://unit42.paloaltonetworks.com/feed/',            /* Unit42 */
+          'https://securityintelligence.com/feed/',               /* IBM Security Intelligence */
+          'https://securelist.com/feed/',                         /* Kaspersky Securelist */
+          'https://security.googleblog.com/atom.xml',             /* Google Security Blog */
+          'https://github.blog/category/security/feed/',          /* GitHub Security Blog */
+          'https://blog.qualys.com/feed'                          /* Qualys Blog */
         ].join('\n');
       }
       const cached = loadCache();
